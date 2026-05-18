@@ -1,363 +1,1444 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Expense Dashboard</title>
- 
-<style>
-body{
-  margin:0;
-  font-family:"Segoe UI",sans-serif;
-  background:#0f172a;
-  color:#e5e7eb;
-  display:flex;
-  justify-content:center;
-}
-.app{
-  width:100%;
-  max-width:1000px;
-  padding:20px;
-}
-.header{text-align:center}
-.nav{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-  flex-wrap:wrap;
-  margin:15px 0;
-}
-.nav button{
-  background:#1f2937;
-  color:white;
-  border:none;
-  padding:8px 12px;
-  border-radius:8px;
-  cursor:pointer;
-}
-.active{background:#4f46e5}
-.card{
-  background:rgba(255,255,255,.05);
-  padding:16px;
-  border-radius:12px;
-  margin-top:15px;
-}
-.view{display:none}
-.show{display:block}
-input,button{
-  padding:8px;
-  margin:4px 0;
-  border-radius:6px;
-  border:1px solid #334155;
-  background:#020617;
-  color:white;
-}
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:13px;
-}
-th,td{
-  border-bottom:1px solid #334155;
-  padding:8px;
-  text-align:center;
-}
-#toast{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  background:#4f46e5;
-  padding:10px 14px;
-  border-radius:8px;
-  opacity:0;
-  transition:.3s;
-}
- 
-input[type="date"] {
-  color-scheme: dark;
-}
- 
-input[type="month"] {
-  color-scheme: dark;
-  color: white;
-}
- 
-input[type="month"]::-webkit-calendar-picker-indicator
-input[type="month"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-}
- 
-#toast.show{opacity:1}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expense Dashboard</title>
+  <style>
+    :root {
+      --bg0: #070a12;
+      --bg1: #0b1020;
+      --surface: rgba(255,255,255,0.04);
+      --surface2: rgba(255,255,255,0.07);
+      --border: rgba(148,163,184,0.22);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-dim: #4f46e5;
+      --danger: #f43f5e;
+      --success: #34d399;
+      --focus: #a5b4fc;
+      --radius: 12px;
+      --shadow: 0 18px 50px rgba(0,0,0,0.45);
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 10% -10%, rgba(99,102,241,0.18), transparent 55%),
+                  radial-gradient(900px 500px at 100% 0%, rgba(52,211,153,0.10), transparent 50%),
+                  linear-gradient(180deg, var(--bg1), var(--bg0));
+      line-height: 1.45;
+    }
+    a { color: var(--focus); }
+    a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .skip-link {
+      position: absolute;
+      left: -999px;
+      top: 8px;
+      padding: 8px 12px;
+      background: var(--primary);
+      color: white;
+      border-radius: 8px;
+      z-index: 100;
+    }
+    .skip-link:focus { left: 12px; }
+
+    .busy-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 1.1s linear infinite;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+      z-index: 200;
+    }
+    .busy-bar.on { opacity: 1; }
+    @keyframes shimmer { 0% { background-position: 0% 0; } 100% { background-position: 200% 0; } }
+
+    .shell { max-width: 1120px; margin: 0 auto; padding: 20px 18px 48px; }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(2,6,23,0.55);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 10px;
+      z-index: 50;
+    }
+    .brand { min-width: 200px; }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+    }
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .topbar-actions {
+      margin-left: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    label.sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    .field-inline { display: flex; flex-direction: column; gap: 4px; }
+    .field-inline span { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+    select, input, textarea {
+      background: rgba(2,6,23,0.75);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      min-height: 42px;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    input[type="date"], input[type="month"] { color-scheme: dark; }
+    input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .8; }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+      transition: background .15s, border-color .15s, transform .05s;
+      min-height: 42px;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn--primary {
+      background: linear-gradient(180deg, var(--primary), var(--primary-dim));
+      border-color: rgba(99,102,241,0.55);
+      color: #fff;
+      font-weight: 600;
+    }
+    .btn--ghost { background: transparent; }
+    .btn--danger { border-color: rgba(244,63,94,0.45); color: #fecdd3; }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 8px;
+    }
+    .nav button {
+      border: 1px solid transparent;
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .nav button[aria-current="page"] {
+      background: rgba(99,102,241,0.18);
+      border-color: rgba(99,102,241,0.45);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    main#main-content { margin-top: 10px; }
+
+    .panel {
+      display: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(2,6,23,0.55);
+      box-shadow: var(--shadow);
+      padding: 18px 18px 16px;
+      margin-top: 12px;
+    }
+    .panel.is-visible { display: block; }
+
+    .panel-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .panel-head h2 { margin: 0; font-size: 1.1rem; }
+    .panel-head p { margin: 0; color: var(--muted); font-size: 0.9rem; max-width: 62ch; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 720px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    .actions-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
+    .table-wrap {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: auto;
+      max-height: min(52vh, 520px);
+      background: rgba(0,0,0,0.18);
+    }
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    table.data thead th {
+      position: sticky;
+      top: 0;
+      background: rgba(15,23,42,0.95);
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+    table.data td {
+      border-bottom: 1px solid rgba(148,163,184,0.12);
+      padding: 10px 12px;
+      vertical-align: middle;
+    }
+    table.data tbody tr:hover td { background: rgba(255,255,255,0.03); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .pill--ok { border-color: rgba(52,211,153,0.35); color: #bbf7d0; }
+
+    .empty {
+      margin-top: 12px;
+      padding: 22px;
+      border: 1px dashed rgba(148,163,184,0.35);
+      border-radius: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .toast-host {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 120;
+      max-width: min(420px, calc(100vw - 32px));
+    }
+    .toast {
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.92);
+      box-shadow: var(--shadow);
+      color: var(--text);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .2s, transform .2s;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast--error { border-color: rgba(244,63,94,0.45); }
+    .toast--success { border-color: rgba(52,211,153,0.35); }
+
+    .chart-grid {
+      display: grid;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (min-width: 960px) {
+      .chart-grid--2 { grid-template-columns: 1fr 1fr; }
+    }
+    .chart-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: rgba(0,0,0,0.18);
+    }
+    .chart-card h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .chart-canvas-wrap {
+      position: relative;
+      height: 260px;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      align-items: flex-end;
+      margin-top: 8px;
+    }
+    .controls-row .field-inline { min-width: 140px; }
+
+    .muted { color: var(--muted); font-size: 0.9rem; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.85em; }
+  </style>
 </head>
- 
 <body>
-<div class="app">
- 
-<div class="header">
-  <h2>💰 Expense Dashboard</h2>
-  <div id="activeUserInfo"></div>
-</div>
- 
-<div class="nav">
-  <button id="b1" class="active" onclick="showView('add')">➕ Add Expense</button>
-  <button id="b2" onclick="showView('expenses')">📋 Expenses</button>
-  <button id="b3" onclick="showView('summary')">📊 Summary</button>
-  <button id="b4" onclick="showView('users')">👤 Users</button>
-  <button id="b5" onclick="showView('categories')">📁 Categories</button>
-</div>
- 
-<!-- ADD EXPENSE -->
-<div class="card view show" id="addView">
-  <h3>Add / Edit Expense</h3>
-  <input id="expenseName" placeholder="Expense name">
-  <input id="category" list="cats" placeholder="Category">
-  <datalist id="cats"></datalist>
-  <input id="amount" type="number" placeholder="Amount">
-  <input id="date" type="date">
-  <button onclick="addExpense()">Save Expense</button>
-</div>
- 
-<!-- EXPENSE LIST -->
-<div class="card view" id="expenseView">
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th><th>Category</th><th>₹</th><th>Date</th><th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="list"></tbody>
-  </table>
-</div>
- 
-<!-- SUMMARY -->
-<div class="card view" id="summaryView">
-  <h3>Monthly Summary</h3>
-  <input type="month" id="monthPicker" onchange="summary()">
-  <div id="summaryText"></div>
-</div>
- 
-<!-- USERS -->
-<div class="card view" id="userView">
-  <h3>User Management</h3>
-  <input id="userName" placeholder="User Name">
-  <input id="userEmail" placeholder="Email">
-  <button onclick="saveUser()">Save User</button>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th><th>Email</th><th>Active</th><th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="userList"></tbody>
-  </table>
-</div>
- 
-<!-- CATEGORIES -->
-<div class="card view" id="categoryView">
-  <h3>Category Management</h3>
-  <input id="categoryName" placeholder="Category Name">
-  <button onclick="saveCategory()">Save Category</button>
-  <table>
-    <thead><tr><th>Category</th><th>Action</th></tr></thead>
-    <tbody id="categoryList"></tbody>
-  </table>
-</div>
- 
-</div>
- 
-<div id="toast"></div>
- 
-<script>
-/* ---------- GLOBAL STATE ---------- */
-let users = JSON.parse(localStorage.getItem("users")) || [];
-let categories = JSON.parse(localStorage.getItem("categories")) || [];
-let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
-let activeUserId = localStorage.getItem("activeUserId");
-let userEdit = -1, catEdit = -1, expEdit = -1;
- 
-/* ---------- UTILS ---------- */
-const nameEl=()=>name;
-const catEl=()=>category;
-const amtEl=()=>amount;
-const dateEl=()=>date;
- 
-function renderActiveUser(){
-  const u = users.find(u => u.id == activeUserId);
-  activeUserInfo.innerText = u
-    ? "Active User: " + u.name
-    : "No user selected";
-}
- 
- 
-function showToast(msg){
-  toast.innerText=msg;
-  toast.classList.add("show");
-  setTimeout(()=>toast.classList.remove("show"),2000);
-}
- 
-function showView(v){
-  document.querySelectorAll(".view").forEach(x=>x.classList.remove("show"));
-  document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
-  ({add:addView,expenses:expenseView,summary:summaryView,users:userView,categories:categoryView}[v]).classList.add("show");
-  document.getElementById("b"+({add:1,expenses:2,summary:3,users:4,categories:5}[v])).classList.add("active");
-  renderAll();
-}
- 
-/* ---------- USER CRUD ---------- */
-function saveUser(){
-  const name=userName.value.trim(), email=userEmail.value.trim();
-  if(!name||!email) return showToast("Invalid user");
-  if(userEdit==-1) users.push({id:Date.now(),name,email});
-  else users[userEdit]={...users[userEdit],name,email};
-  userEdit=-1;
-  localStorage.setItem("users",JSON.stringify(users));
-  renderUsers(); showToast("User saved");
-  userName.value=userEmail.value="";
-}
- 
-function renderUsers(){
-  userList.innerHTML=users.map((u,i)=>`
-    <tr>
-      <td>${u.name}</td><td>${u.email}</td>
-      <td>${u.id==activeUserId?"✅":""}</td>
-      <td>
-        <button onclick="setUser(${u.id})">Use</button>
-        <button onclick="editUser(${i})">✏️</button>
-        <button onclick="delUser(${i})">🗑</button>
-      </td>
-    </tr>`).join("");
-}
- 
-function setUser(id){
-  activeUserId=id;
-  localStorage.setItem("activeUserId",id);
-  renderAll(); showToast("Active user set");
-}
-function editUser(i){userEdit=i; userName.value=users[i].name; userEmail.value=users[i].email;}
-function delUser(i){
-  const id=users[i].id;
-  users.splice(i,1);
-  expenses=expenses.filter(e=>e.userId!=id);
-  localStorage.setItem("users",JSON.stringify(users));
-  localStorage.setItem("expenses",JSON.stringify(expenses));
-  renderAll();
-}
- 
-/* ---------- CATEGORY CRUD ---------- */
-function saveCategory(){
-  const c=categoryName.value.trim();
-  if(!c) return;
-  if(catEdit==-1) categories.push(c);
-  else categories[catEdit]=c;
-  catEdit=-1;
-  localStorage.setItem("categories",JSON.stringify(categories));
-  categoryName.value="";
-  renderCategories(); renderCategoryOptions();
-}
- 
-function renderCategories(){
-  categoryList.innerHTML=categories.map((c,i)=>`
-    <tr><td>${c}</td>
-    <td>
-      <button onclick="editCat(${i})">✏️</button>
-      <button onclick="delCat(${i})">🗑</button>
-    </td></tr>`).join("");
-}
-function editCat(i){catEdit=i; categoryName.value=categories[i]}
-function delCat(i){
-  if(expenses.some(e=>e.category==categories[i])) return alert("Category in use");
-  categories.splice(i,1);
-  localStorage.setItem("categories",JSON.stringify(categories));
-  renderCategories(); renderCategoryOptions();
-}
-function renderCategoryOptions(){
-  cats.innerHTML=categories.map(c=>`<option value="${c}">`).join("");
-}
- 
-/* ---------- EXPENSE CRUD ---------- */
-function addExpense(){
-  if(!activeUserId) return showToast("Select user first");
-  if(!expenseName.value.trim()) return showToast("Enter expense name");
-  if(!category.value.trim()) return showToast("Select category");
-  if(!amount.value || amount.value <= 0) return showToast("Enter valid amount");
-  if(!date.value) return showToast("Select date");
- 
-  const d = {
-    id: Date.now(),
-    userId: +activeUserId,
-    name: expenseName.value.trim(),
-    category: category.value,
-    amount: +amount.value,
-    date: date.value
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="busy-bar" id="busyBar" aria-hidden="true"></div>
+
+  <div class="shell">
+    <header class="topbar" role="banner">
+      <div class="brand">
+        <h1>Expense Dashboard</h1>
+        <p>Track spending by user, category, and month — data stored on the server.</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="field-inline">
+          <span>Active profile</span>
+          <label class="sr-only" for="activeUserSelect">Active profile</label>
+          <select id="activeUserSelect" aria-label="Active profile"></select>
+        </div>
+        <button type="button" class="btn btn--ghost" id="refreshBtn">Refresh</button>
+        <a class="btn btn--ghost" href="/docs" target="_blank" rel="noopener">API docs</a>
+      </div>
+    </header>
+
+    <nav class="nav" aria-label="Primary">
+      <button type="button" id="navAdd" aria-current="page">Add expense</button>
+      <button type="button" id="navExp">Expenses</button>
+      <button type="button" id="navSum">Reports</button>
+      <button type="button" id="navUsers">Users</button>
+      <button type="button" id="navCats">Categories</button>
+    </nav>
+
+    <main id="main-content">
+      <!-- Add expense -->
+      <section class="panel is-visible" id="panelAdd" aria-labelledby="addTitle">
+        <div class="panel-head">
+          <h2 id="addTitle">Add or edit expense</h2>
+          <p id="addSubtitle" class="muted">Pick any profile for this expense — it does not have to match the header “active” shortcut.</p>
+        </div>
+        <div class="grid-2">
+          <div class="field-inline">
+            <span>Profile</span>
+            <label class="sr-only" for="expenseUserSelect">Profile this expense belongs to</label>
+            <select id="expenseUserSelect" aria-label="Expense owner profile"></select>
+          </div>
+          <div class="field-inline">
+            <span>Title</span>
+            <label class="sr-only" for="expenseName">Expense title</label>
+            <input id="expenseName" autocomplete="off" placeholder="e.g. Team lunch">
+          </div>
+          <div class="field-inline">
+            <span>Category</span>
+            <label class="sr-only" for="categorySelect">Category</label>
+            <select id="categorySelect"></select>
+          </div>
+          <div class="field-inline">
+            <span>Amount</span>
+            <label class="sr-only" for="amount">Amount</label>
+            <input id="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="field-inline">
+            <span>Date</span>
+            <label class="sr-only" for="date">Date</label>
+            <input id="date" type="date">
+          </div>
+          <div class="field-inline" style="grid-column:1/-1">
+            <span>Notes</span>
+            <label class="sr-only" for="expenseNotes">Notes</label>
+            <textarea id="expenseNotes" rows="2" placeholder="Optional memo (receipt #, split info, …)"></textarea>
+          </div>
+          <div class="field-inline">
+            <span>Payment</span>
+            <label class="sr-only" for="expensePayment">Payment method</label>
+            <select id="expensePayment">
+              <option value="">— Not set —</option>
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="upi">UPI</option>
+              <option value="bank_transfer">Bank transfer</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button type="button" class="btn btn--primary" id="saveExpenseBtn">Save expense</button>
+          <button type="button" class="btn btn--ghost" id="cancelExpenseBtn">Cancel</button>
+        </div>
+      </section>
+
+      <!-- Expenses -->
+      <section class="panel" id="panelExp" aria-labelledby="expTitle" hidden>
+        <div class="panel-head">
+          <h2 id="expTitle">Expenses</h2>
+          <p>Choose whose expenses to list — independent of the header active profile.</p>
+        </div>
+        <div class="field-inline" style="max-width:min(100%,380px);margin-bottom:12px">
+          <span>Show expenses for</span>
+          <label class="sr-only" for="expenseListUserSelect">Profile filter</label>
+          <select id="expenseListUserSelect" aria-label="Filter expenses by profile"></select>
+        </div>
+        <div id="expEmpty" class="empty" style="display:none">No expenses yet. Add one from the first tab.</div>
+        <div class="table-wrap" id="expTableWrap">
+          <table class="data" aria-label="Expenses">
+            <thead>
+              <tr>
+                <th scope="col">Profile</th>
+                <th scope="col">Title</th>
+                <th scope="col">Category</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Date</th>
+                <th scope="col">Payment</th>
+                <th scope="col">Notes</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="expRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Reports & charts -->
+      <section class="panel" id="panelSum" aria-labelledby="sumTitle" hidden>
+        <div class="panel-head">
+          <h2 id="sumTitle">Reports & charts</h2>
+          <p>Pick <b>all users</b>, the <b>header active profile</b>, or <b>any one profile</b> — every figure and chart follows that scope.</p>
+        </div>
+
+        <div class="controls-row">
+          <div class="field-inline">
+            <span>Scope</span>
+            <label class="sr-only" for="reportScope">Report scope</label>
+            <select id="reportScope" aria-label="Report scope"></select>
+          </div>
+          <div class="field-inline">
+            <span>Year (charts)</span>
+            <label class="sr-only" for="reportYear">Year for charts</label>
+            <input id="reportYear" type="number" min="1900" max="2100" step="1" style="max-width:120px">
+          </div>
+          <div class="field-inline">
+            <span>Month (detail table)</span>
+            <label class="sr-only" for="monthPicker">Month</label>
+            <input type="month" id="monthPicker">
+          </div>
+        </div>
+
+        <div class="controls-row">
+          <div class="field-inline">
+            <span>Multi-year from</span>
+            <label class="sr-only" for="reportFromYear">From year</label>
+            <input id="reportFromYear" type="number" min="1900" max="2100" step="1" style="max-width:120px">
+          </div>
+          <div class="field-inline">
+            <span>Multi-year to</span>
+            <label class="sr-only" for="reportToYear">To year</label>
+            <input id="reportToYear" type="number" min="1900" max="2100" step="1" style="max-width:120px">
+          </div>
+        </div>
+
+        <h3 class="muted" style="margin:18px 0 8px;font-size:0.95rem">Category breakdown (selected month)</h3>
+        <div id="summaryBody" class="muted" style="margin-top:6px"></div>
+
+        <div class="chart-grid chart-grid--2">
+          <div class="chart-card">
+            <h3>Spend by month (selected chart year)</h3>
+            <div class="chart-canvas-wrap"><canvas id="chartMonths" aria-label="Spend by calendar month"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3 id="chartUsersTitle">Spend by profile (full chart year)</h3>
+            <div class="chart-canvas-wrap"><canvas id="chartUsers" aria-label="Spend by user"></canvas></div>
+          </div>
+        </div>
+        <div class="chart-grid" style="margin-top:0">
+          <div class="chart-card">
+            <h3>Total by calendar year (range below)</h3>
+            <div class="chart-canvas-wrap"><canvas id="chartYears" aria-label="Spend by year"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Users -->
+      <section class="panel" id="panelUsers" aria-labelledby="usersTitle" hidden>
+        <div class="panel-head">
+          <h2 id="usersTitle">Users</h2>
+          <p>Profiles are independent; each has its own expenses.</p>
+        </div>
+        <div class="grid-2">
+          <div class="field-inline">
+            <span>Name</span>
+            <label class="sr-only" for="userName">Name</label>
+            <input id="userName" autocomplete="name" placeholder="Full name">
+          </div>
+          <div class="field-inline">
+            <span>Email</span>
+            <label class="sr-only" for="userEmail">Email</label>
+          <div class="field-inline">
+            <span>Phone</span>
+            <label class="sr-only" for="userPhone">Phone</label>
+            <input id="userPhone" type="tel" autocomplete="tel" placeholder="+1 … (optional)">
+          </div>
+        </div>
+        <div class="actions-row">
+          <button type="button" class="btn btn--primary" id="saveUserBtn">Save user</button>
+          <button type="button" class="btn btn--ghost" id="cancelUserBtn">Clear</button>
+        </div>
+        <div id="usersEmpty" class="empty" style="display:none">No users yet. Create the first profile above.</div>
+        <div class="table-wrap" id="usersTableWrap">
+          <table class="data" aria-label="Users">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Phone</th>
+                <th scope="col">Status</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="userRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Categories -->
+      <section class="panel" id="panelCats" aria-labelledby="catsTitle" hidden>
+        <div class="panel-head">
+          <h2 id="catsTitle">Categories</h2>
+          <p>Categories shared across profiles. Deleting a category is blocked while expenses reference it.</p>
+        </div>
+        <div class="grid-2" style="max-width:720px">
+          <div class="field-inline">
+            <span>Name</span>
+            <label class="sr-only" for="categoryName">Category name</label>
+            <input id="categoryName" autocomplete="off" placeholder="e.g. Travel">
+          </div>
+          <div class="field-inline" style="grid-column:1/-1">
+            <span>Description</span>
+            <label class="sr-only" for="categoryDescription">Category description</label>
+            <textarea id="categoryDescription" rows="2" placeholder="Optional — what belongs in this category"></textarea>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button type="button" class="btn btn--primary" id="saveCatBtn">Save category</button>
+          <button type="button" class="btn btn--ghost" id="cancelCatBtn">Clear</button>
+        </div>
+        <div id="catsEmpty" class="empty" style="display:none">No categories yet. Add at least one before recording expenses.</div>
+        <div class="table-wrap" id="catsTableWrap">
+          <table class="data" aria-label="Categories">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Description</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="catRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+
+  <div class="toast-host" id="toastHost" aria-live="polite" aria-relevant="additions text"></div>
+
+  <script>
+  const API = "";
+
+  let users = [];
+  let categories = [];
+  let expenses = [];
+  let activeUserId = localStorage.getItem("activeUserId");
+  let editingUserId = null;
+  let editingCategoryId = null;
+  let editingExpenseId = null;
+  let busyCount = 0;
+  let chartMonths = null;
+  let chartYears = null;
+  let chartUsers = null;
+
+  const panels = {
+    add: document.getElementById("panelAdd"),
+    expenses: document.getElementById("panelExp"),
+    summary: document.getElementById("panelSum"),
+    users: document.getElementById("panelUsers"),
+    categories: document.getElementById("panelCats"),
   };
- 
-  if(expEdit === -1) {
-    expenses.push(d);
-  } else {
-    expenses[expEdit] = { ...d, id: expenses[expEdit].id };
-    expEdit = -1;
+  const navButtons = {
+    add: document.getElementById("navAdd"),
+    expenses: document.getElementById("navExp"),
+    summary: document.getElementById("navSum"),
+    users: document.getElementById("navUsers"),
+    categories: document.getElementById("navCats"),
+  };
+
+  const EXPENSE_LIST_FOLLOW_ACTIVE = "__active__";
+  let expenseListUserId = localStorage.getItem("expenseListUserId");
+  if (expenseListUserId == null || expenseListUserId === "") {
+    expenseListUserId = EXPENSE_LIST_FOLLOW_ACTIVE;
+    localStorage.setItem("expenseListUserId", expenseListUserId);
   }
- 
-  localStorage.setItem("expenses", JSON.stringify(expenses));
-  clearExp();
-  renderExpenses();
-}
- 
-function renderExpenses(){
-  list.innerHTML=expenses.filter(e=>e.userId==activeUserId).map(e=>`
-    <tr>
-      <td>${e.name}</td><td>${e.category}</td><td>₹${e.amount}</td><td>${e.date}</td>
+
+  const REPORT_SCOPE_STORAGE = "reportScopeValue";
+
+  function renderReportScopeSelect() {
+    const sel = document.getElementById("reportScope");
+    if (!sel) return;
+    let saved = localStorage.getItem(REPORT_SCOPE_STORAGE) || "all";
+    const prev = sel.value;
+    if (prev === "all" || prev === "active" || users.some(u => String(u.id) === prev)) {
+      saved = prev;
+    }
+    if (saved !== "all" && saved !== "active" && !users.some(u => String(u.id) === saved)) {
+      saved = "all";
+      localStorage.setItem(REPORT_SCOPE_STORAGE, saved);
+    }
+    if (!users.length) {
+      sel.innerHTML = "<option value=\"all\">All users</option>";
+      sel.value = "all";
+      sel.disabled = true;
+      return;
+    }
+    sel.disabled = false;
+    const opts = [
+      "<option value=\"all\">All users (combined)</option>",
+      "<option value=\"active\">Active profile (header)</option>",
+    ].concat(users.map(u =>
+      `<option value="${u.id}">Only: ${escapeHtml(u.name)}</option>`
+    ));
+    sel.innerHTML = opts.join("");
+    sel.value = saved;
+    if (sel.value !== saved) {
+      sel.value = "all";
+      localStorage.setItem(REPORT_SCOPE_STORAGE, "all");
+    }
+  }
+
+  function reportScopeLabelForCharts(uid) {
+    if (uid === null) return "All users";
+    const u = users.find(x => Number(x.id) === Number(uid));
+    const rs = document.getElementById("reportScope");
+    const scope = rs ? rs.value : "";
+    if (scope === "active" && u) return "Active: " + u.name;
+    if (u) return u.name;
+    return "Profile #" + String(uid);
+  }
+
+  function resolveExpenseListUserId() {
+    if (expenseListUserId === EXPENSE_LIST_FOLLOW_ACTIVE || expenseListUserId == null || expenseListUserId === "") {
+      if (activeUserId != null && activeUserId !== "") return String(activeUserId);
+      return null;
+    }
+    return String(expenseListUserId);
+  }
+
+  function defaultExpenseOwnerId() {
+    const lid = resolveExpenseListUserId();
+    if (lid != null) return lid;
+    if (activeUserId != null && activeUserId !== "") return String(activeUserId);
+    if (users.length) return String(users[0].id);
+    return "";
+  }
+
+  function renderExpenseListUserSelect() {
+    const sel = document.getElementById("expenseListUserSelect");
+    if (!sel) return;
+    if (!users.length) {
+      sel.innerHTML = "<option value=\"\">No profiles yet</option>";
+      sel.disabled = true;
+      return;
+    }
+    sel.disabled = false;
+    const cur = String(expenseListUserId);
+    const opts = [
+      `<option value="${EXPENSE_LIST_FOLLOW_ACTIVE}" ${cur === EXPENSE_LIST_FOLLOW_ACTIVE ? "selected" : ""}>Same as active profile</option>`,
+    ].concat(users.map(u => {
+      const selAttr = String(u.id) === cur ? "selected" : "";
+      return `<option value="${u.id}" ${selAttr}>${escapeHtml(u.name)}</option>`;
+    }));
+    sel.innerHTML = opts.join("");
+  }
+
+  function renderExpenseUserSelect() {
+    const sel = document.getElementById("expenseUserSelect");
+    if (!sel) return;
+    if (!users.length) {
+      sel.innerHTML = "<option value=\"\">No profiles yet</option>";
+      sel.disabled = true;
+      return;
+    }
+    sel.disabled = false;
+    sel.innerHTML = users.map(u =>
+      `<option value="${u.id}">${escapeHtml(u.name)} — ${escapeHtml(u.email)}</option>`
+    ).join("");
+    if (editingExpenseId != null) {
+      const row = expenses.find(x => x.id === editingExpenseId);
+      if (row && row.user_id != null) sel.value = String(row.user_id);
+    } else {
+      const d = defaultExpenseOwnerId();
+      if (d) sel.value = d;
+    }
+  }
+
+  function setBusy(on) {
+    busyCount += on ? 1 : -1;
+    if (busyCount < 0) busyCount = 0;
+    const bar = document.getElementById("busyBar");
+    const busy = busyCount > 0;
+    bar.classList.toggle("on", busy);
+    bar.setAttribute("aria-hidden", busy ? "false" : "true");
+    document.querySelectorAll("main button, main select, main input, main textarea, header button, header select").forEach(el => {
+      if (el.id === "refreshBtn") return;
+      el.disabled = busy;
+    });
+    const rb = document.getElementById("refreshBtn");
+    if (rb) rb.disabled = busy;
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function truncText(s, maxLen) {
+    const t = String(s || "").trim();
+    if (t.length <= maxLen) return escapeHtml(t);
+    return escapeHtml(t.slice(0, maxLen)) + "…";
+  }
+
+  function formatErrorDetail(detail) {
+    if (detail == null) return "Request failed";
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) {
+      return detail.map(e => e.msg || JSON.stringify(e)).join("; ");
+    }
+    return String(detail);
+  }
+
+  async function apiJson(url, options) {
+    let res;
+    try {
+      res = await fetch(url, options);
+    } catch {
+      throw new Error("Network error — check that the API server is running.");
+    }
+    const text = await res.text();
+    let body = null;
+    if (text) {
+      try { body = JSON.parse(text); } catch { body = text; }
+    }
+    if (!res.ok) {
+      const msg = body && typeof body === "object" && "detail" in body
+        ? formatErrorDetail(body.detail)
+        : (typeof body === "string" ? body : res.statusText);
+      throw new Error(msg);
+    }
+    return body;
+  }
+
+  function showToast(message, variant) {
+    const host = document.getElementById("toastHost");
+    const el = document.createElement("div");
+    el.className = "toast" + (variant === "error" ? " toast--error" : variant === "success" ? " toast--success" : "");
+    el.textContent = message;
+    host.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("show"));
+    setTimeout(() => {
+      el.classList.remove("show");
+      setTimeout(() => el.remove(), 220);
+    }, 3200);
+  }
+
+  function setDateConstraintsForMode() {
+    const d = document.getElementById("date");
+    const today = new Date().toISOString().slice(0, 10);
+    if (editingExpenseId == null) {
+      d.max = today;
+    } else {
+      d.removeAttribute("max");
+    }
+  }
+
+  function showPanel(key) {
+    Object.entries(panels).forEach(([k, el]) => {
+      const on = k === key;
+      el.classList.toggle("is-visible", on);
+      el.toggleAttribute("hidden", !on);
+    });
+    Object.entries(navButtons).forEach(([k, btn]) => {
+      if (!btn) return;
+      btn.setAttribute("aria-current", k === key ? "page" : "false");
+    });
+  }
+
+  function renderActiveUserSelect() {
+    const sel = document.getElementById("activeUserSelect");
+    const cur = activeUserId != null && activeUserId !== "" ? String(activeUserId) : "";
+    const opts = [`<option value="">${users.length ? "Select profile…" : "No profiles yet"}</option>`]
+      .concat(users.map(u => `<option value="${u.id}" ${String(u.id) === cur ? "selected" : ""}>${escapeHtml(u.name)}</option>`));
+    sel.innerHTML = opts.join("");
+  }
+
+  function renderCategorySelect() {
+    const sel = document.getElementById("categorySelect");
+    const opts = [`<option value="">${categories.length ? "Select category…" : "Create a category first"}</option>`]
+      .concat(categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`));
+    sel.innerHTML = opts.join("");
+  }
+
+  function renderExpenseSubtitle() {
+    const sub = document.getElementById("addSubtitle");
+    sub.textContent = editingExpenseId == null
+      ? "Pick any profile for this expense — independent of the header shortcut. New expenses cannot be future-dated."
+      : "You can move this expense to another profile or edit amount, category, and date.";
+  }
+
+  function renderUsersTable() {
+    const empty = document.getElementById("usersEmpty");
+    const wrap = document.getElementById("usersTableWrap");
+    const aid = activeUserId != null ? String(activeUserId) : "";
+    empty.style.display = users.length ? "none" : "block";
+    wrap.style.display = users.length ? "block" : "none";
+    document.getElementById("userRows").innerHTML = users.map(u => {
+      const current = String(u.id) === aid;
+      return `<tr>
+        <td>${escapeHtml(u.name)}</td>
+        <td>${escapeHtml(u.email)}</td>
+        <td>${escapeHtml(u.phone || "")}</td>
+        <td>${current ? "<span class=\"pill pill--ok\">Current profile</span>" : "<span class=\"pill\">—</span>"}</td>
+        <td>
+          <button type="button" class="btn btn--ghost" data-act="edit-user" data-id="${u.id}">Edit</button>
+          <button type="button" class="btn btn--danger" data-act="del-user" data-id="${u.id}">Delete</button>
+        </td>
+      </tr>`;
+    }).join("") || "";
+  }
+
+  function renderCatsTable() {
+    const empty = document.getElementById("catsEmpty");
+    const wrap = document.getElementById("catsTableWrap");
+    empty.style.display = categories.length ? "none" : "block";
+    wrap.style.display = categories.length ? "block" : "none";
+    document.getElementById("catRows").innerHTML = categories.map(c => `<tr>
+      <td>${escapeHtml(c.name)}</td>
+      <td>${truncText(c.description || "", 64)}</td>
       <td>
-        <button onclick="editExpense(${e.id})">✏️</button>
-        <button onclick="delExpense(${e.id})">🗑</button>
+        <button type="button" class="btn btn--ghost" data-act="edit-cat" data-id="${c.id}">Edit</button>
+        <button type="button" class="btn btn--danger" data-act="del-cat" data-id="${c.id}">Delete</button>
       </td>
-    </tr>`).join("");
-}
-function editExpense(id){
-  const i=expenses.findIndex(e=>e.id==id);
-  const e=expenses[i]; expEdit=i;
-  expenseName.value=e.name; category.value=e.category; amount.value=e.amount; date.value=e.date;
-  showView('add');
-}
-function delExpense(id){
-  if(!confirm("Are you sure you want to delete this expense?")) return;
- 
-  expenses = expenses.filter(e => e.id != id);
-  localStorage.setItem("expenses", JSON.stringify(expenses));
-  renderExpenses();
-  summary();
-}
-function clearExp(){expenseName.value=category.value=amount.value="";date.value=new Date().toISOString().slice(0,10)}
- 
-/* ---------- SUMMARY ---------- */
-function summary(){
-  if(!activeUserId||!monthPicker.value) return;
-  const [y,m]=monthPicker.value.split("-");
-  let t=0,map={};
-  expenses.filter(e=>e.userId==activeUserId).forEach(e=>{
-    const d=new Date(e.date);
-    if(d.getFullYear()==y&&d.getMonth()+1==m){
-      t+=e.amount;
-      map[e.category]=(map[e.category]||0)+e.amount;
+    </tr>`).join("") || "";
+  }
+
+  function renderExpensesTable() {
+    const empty = document.getElementById("expEmpty");
+    const wrap = document.getElementById("expTableWrap");
+    const listUid = resolveExpenseListUserId();
+    const hasUser = listUid != null && listUid !== "";
+    const show = hasUser && expenses.length > 0;
+    empty.style.display = (!hasUser || expenses.length) ? "none" : "block";
+    empty.textContent = !hasUser
+      ? "Choose a profile in the filter above, or set an active profile in the header when using “Same as active profile”."
+      : "No expenses yet for this profile. Add one from the first tab.";
+    wrap.style.display = show ? "block" : "none";
+    document.getElementById("expRows").innerHTML = expenses.map(e => {
+      const owner = users.find(u => String(u.id) === String(e.user_id));
+      const ownerLabel = owner ? escapeHtml(owner.name) : ("#" + escapeHtml(String(e.user_id)));
+      const pay = (e.payment_method || "").trim();
+      const payLabel = pay ? escapeHtml(pay.replace(/_/g, " ")) : "—";
+      return `<tr>
+        <td>${ownerLabel}</td>
+        <td>${escapeHtml(e.name || "")}</td>
+        <td>${escapeHtml(e.category)}</td>
+        <td>₹${Number(e.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td><span class="kbd">${escapeHtml(String(e.expense_date).slice(0, 10))}</span></td>
+        <td>${payLabel}</td>
+        <td style="max-width:180px;text-align:left">${truncText(e.notes, 56)}</td>
+        <td>
+          <button type="button" class="btn btn--ghost" data-act="edit-exp" data-id="${e.id}">Edit</button>
+          <button type="button" class="btn btn--danger" data-act="del-exp" data-id="${e.id}">Delete</button>
+        </td>
+      </tr>`;
+    }).join("") || "";
+  }
+
+  async function loadAll() {
+    setBusy(true);
+    try {
+      const [u, c] = await Promise.all([
+        apiJson(API + "/users"),
+        apiJson(API + "/categories"),
+      ]);
+      users = u;
+      categories = c;
+      const listUid = resolveExpenseListUserId();
+      if (listUid != null && listUid !== "") {
+        try {
+          expenses = await apiJson(API + "/expenses?user_id=" + encodeURIComponent(listUid));
+        } catch (err) {
+          expenseListUserId = EXPENSE_LIST_FOLLOW_ACTIVE;
+          localStorage.setItem("expenseListUserId", expenseListUserId);
+          const retryUid = resolveExpenseListUserId();
+          if (retryUid != null && retryUid !== "") {
+            expenses = await apiJson(API + "/expenses?user_id=" + encodeURIComponent(retryUid));
+          } else {
+            expenses = [];
+          }
+        }
+      } else {
+        expenses = [];
+      }
+    } finally {
+      setBusy(false);
+    }
+    renderAllDom();
+  }
+
+  function renderAllDom() {
+    renderActiveUserSelect();
+    renderReportScopeSelect();
+    renderExpenseListUserSelect();
+    renderExpenseUserSelect();
+    renderCategorySelect();
+    renderUsersTable();
+    renderCatsTable();
+    renderExpensesTable();
+    renderExpenseSubtitle();
+    setDateConstraintsForMode();
+  }
+
+  function navigate(view) {
+    showPanel(view);
+    if (view === "summary") refreshReports().catch(e => showToast(e.message, "error"));
+  }
+
+  function destroyReportCharts() {
+    [chartMonths, chartYears, chartUsers].forEach(ch => {
+      if (ch) {
+        try { ch.destroy(); } catch (e) { /* noop */ }
+      }
+    });
+    chartMonths = null;
+    chartYears = null;
+    chartUsers = null;
+  }
+
+  /** null = all users; "MISSING" = active scope but no header profile */
+  function reportUserIdParam() {
+    const sel = document.getElementById("reportScope");
+    const scope = sel ? sel.value : "all";
+    if (scope === "all") return null;
+    if (scope === "active") {
+      if (activeUserId == null || activeUserId === "") return "MISSING";
+      return Number(activeUserId);
+    }
+    const n = Number(scope);
+    if (!Number.isFinite(n) || !users.some(u => u.id === n)) return "MISSING";
+    return n;
+  }
+
+  async function refreshReports() {
+    const el = document.getElementById("summaryBody");
+    if (typeof Chart === "undefined") {
+      el.innerHTML = "<span class=\"muted\">Chart library could not be loaded (network or CDN blocked).</span>";
+      destroyReportCharts();
+      return;
+    }
+
+    const uid = reportUserIdParam();
+    if (uid === "MISSING") {
+      el.innerHTML = "<span class=\"muted\">Choose <b>All users</b> or a named profile in <b>Scope</b>, or set an <b>active profile</b> in the header when using “Active profile”.</span>";
+      destroyReportCharts();
+      return;
+    }
+
+    const mp = document.getElementById("monthPicker").value;
+    if (!mp) {
+      el.innerHTML = "<span class=\"muted\">Pick a month for the category breakdown.</span>";
+      destroyReportCharts();
+      return;
+    }
+    const parts = mp.split("-");
+    const py = Number(parts[0]);
+    const pm = Number(parts[1]);
+    const qm = new URLSearchParams({ year: String(py), month: String(pm) });
+    if (uid !== null) qm.set("user_id", String(uid));
+
+    let data;
+    try {
+      data = await apiJson(API + "/expenses/summary/monthly?" + qm.toString());
+    } catch (err) {
+      el.innerHTML = "<span class=\"muted\">" + escapeHtml(err.message) + "</span>";
+      destroyReportCharts();
+      return;
+    }
+
+    const total = Number(data.total_amount || 0);
+    const rows = data.category_summary || [];
+    if (total <= 0) {
+      el.innerHTML = "<span class=\"muted\">No spending in that month for this scope.</span>";
+    } else {
+      el.innerHTML = "<div style=\"font-weight:700;margin-bottom:10px\">Total ₹" + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "</div>" +
+        rows.map(x => "<div style=\"display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid rgba(148,163,184,0.12)\">" +
+          "<span>" + escapeHtml(x.category) + "</span><span class=\"kbd\">₹" + Number(x.total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "</span></div>").join("");
+    }
+
+    const ry = Number(document.getElementById("reportYear").value) || new Date().getFullYear();
+    const qsY = new URLSearchParams({ year: String(ry) });
+    if (uid !== null) qsY.set("user_id", String(uid));
+
+    let yearData;
+    let tsData;
+    let byUser = null;
+    try {
+      yearData = await apiJson(API + "/reports/summary/year?" + qsY.toString());
+      const fy = Number(document.getElementById("reportFromYear").value) || ry - 2;
+      const ty = Number(document.getElementById("reportToYear").value) || ry;
+      const qsRange = new URLSearchParams({ from_year: String(fy), to_year: String(ty) });
+      if (uid !== null) qsRange.set("user_id", String(uid));
+      tsData = await apiJson(API + "/reports/timeseries/years?" + qsRange.toString());
+      if (uid === null) {
+        byUser = await apiJson(API + "/reports/by-user?year=" + encodeURIComponent(String(ry)));
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+      destroyReportCharts();
+      return;
+    }
+
+    destroyReportCharts();
+    Chart.defaults.color = "#94a3b8";
+    Chart.defaults.borderColor = "rgba(148,163,184,0.12)";
+
+    const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const mTotals = yearData.months.map(x => Number(x.total));
+    const scopeLabel = reportScopeLabelForCharts(uid);
+    chartMonths = new Chart(document.getElementById("chartMonths"), {
+      type: "bar",
+      data: {
+        labels: monthLabels,
+        datasets: [{
+          label: "₹ (" + scopeLabel + ", " + ry + ")",
+          data: mTotals,
+          backgroundColor: "rgba(99,102,241,0.55)",
+          borderColor: "rgba(129,140,248,0.95)",
+          borderWidth: 1,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true } },
+        scales: {
+          x: { ticks: { maxRotation: 0 } },
+          y: { beginAtZero: true },
+        },
+      },
+    });
+
+    const chartUsersTitleEl = document.getElementById("chartUsersTitle");
+    if (uid === null && byUser) {
+      chartUsersTitleEl.textContent = "Spend by profile (full chart year)";
+      chartUsers = new Chart(document.getElementById("chartUsers"), {
+        type: "bar",
+        data: {
+          labels: byUser.users.map(u => u.name),
+          datasets: [{
+            label: "₹ per profile (" + ry + " full year)",
+            data: byUser.users.map(u => Number(u.total)),
+            backgroundColor: "rgba(52,211,153,0.45)",
+            borderColor: "rgba(110,231,183,0.95)",
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { x: { beginAtZero: true } },
+        },
+      });
+    } else {
+      chartUsersTitleEl.textContent = "By category (" + scopeLabel + ", " + ry + ")";
+      const cats = (yearData.category_summary || []).filter(x => Number(x.total) > 0);
+      const cLabels = cats.length ? cats.map(c => c.category) : ["—"];
+      const cData = cats.length ? cats.map(c => Number(c.total)) : [0];
+      chartUsers = new Chart(document.getElementById("chartUsers"), {
+        type: "bar",
+        data: {
+          labels: cLabels,
+          datasets: [{
+            label: "₹ by category (" + ry + ")",
+            data: cData,
+            backgroundColor: "rgba(52,211,153,0.45)",
+            borderColor: "rgba(110,231,183,0.95)",
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true } },
+          scales: {
+            x: { ticks: { maxRotation: 45, minRotation: 0 } },
+            y: { beginAtZero: true },
+          },
+        },
+      });
+    }
+
+    const pts = tsData.points;
+    chartYears = new Chart(document.getElementById("chartYears"), {
+      type: "line",
+      data: {
+        labels: pts.map(p => String(p.year)),
+        datasets: [{
+          label: "₹ total per year (" + scopeLabel + ")",
+          data: pts.map(p => Number(p.total)),
+          borderColor: "rgb(244, 114, 182)",
+          backgroundColor: "rgba(244, 114, 182, 0.12)",
+          fill: true,
+          tension: 0.25,
+          pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } },
+      },
+    });
+  }
+
+  function clearExpenseForm() {
+    editingExpenseId = null;
+    document.getElementById("expenseName").value = "";
+    document.getElementById("categorySelect").value = "";
+    document.getElementById("amount").value = "";
+    document.getElementById("expenseNotes").value = "";
+    document.getElementById("expensePayment").value = "";
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById("date").value = today;
+    setDateConstraintsForMode();
+    renderExpenseSubtitle();
+    renderExpenseUserSelect();
+  }
+
+  function clearUserForm() {
+    editingUserId = null;
+    document.getElementById("userName").value = "";
+    document.getElementById("userEmail").value = "";
+    document.getElementById("userPhone").value = "";
+  }
+
+  function clearCatForm() {
+    editingCategoryId = null;
+    document.getElementById("categoryName").value = "";
+    document.getElementById("categoryDescription").value = "";
+  }
+
+  document.getElementById("activeUserSelect").addEventListener("change", async (e) => {
+    const v = e.target.value;
+    activeUserId = v === "" ? null : String(v);
+    if (activeUserId == null) localStorage.removeItem("activeUserId");
+    else localStorage.setItem("activeUserId", activeUserId);
+    try {
+      await loadAll();
+      showToast("Profile switched", "success");
+      if (document.getElementById("panelSum").classList.contains("is-visible")) {
+        refreshReports().catch(() => {});
+      }
+    } catch (err) {
+      showToast(err.message, "error");
     }
   });
-  summaryText.innerHTML=t?`<b>Total ₹${t}</b><hr>`+Object.entries(map).map(x=>`${x[0]}:₹${x[1]}`).join("<br>"):"No data";
-}
- 
-/* ---------- INIT ---------- */
-date.value=new Date().toISOString().slice(0,10);
-const today = new Date().toISOString().slice(0,10);
-date.max = today;
-monthPicker.value=new Date().toISOString().slice(0,7);
-renderAll();
-function renderAll(){
-  renderUsers();
-  renderCategories();
-  renderCategoryOptions();
-  renderExpenses();
-  summary();
-  renderActiveUser();
-}
-</script>
+
+  document.getElementById("refreshBtn").addEventListener("click", async () => {
+    try {
+      await loadAll();
+      if (document.getElementById("panelSum").classList.contains("is-visible")) await refreshReports();
+      showToast("Up to date", "success");
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  });
+
+  document.getElementById("monthPicker").addEventListener("change", () => {
+    refreshReports().catch(err => showToast(err.message, "error"));
+  });
+
+  ["reportScope", "reportYear", "reportFromYear", "reportToYear"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("change", () => {
+      if (id === "reportScope") {
+        localStorage.setItem(REPORT_SCOPE_STORAGE, el.value);
+      }
+      refreshReports().catch(err => showToast(err.message, "error"));
+    });
+  });
+
+  Object.entries(navButtons).forEach(([view, btn]) => {
+    if (!btn) return;
+    btn.addEventListener("click", () => navigate(view));
+  });
+
+  document.getElementById("expenseListUserSelect").addEventListener("change", (e) => {
+    const v = e.target.value;
+    expenseListUserId = v === "" ? EXPENSE_LIST_FOLLOW_ACTIVE : v;
+    localStorage.setItem("expenseListUserId", expenseListUserId);
+    loadAll().catch(err => showToast(err.message, "error"));
+  });
+
+  document.getElementById("saveExpenseBtn").addEventListener("click", async () => {
+    const ownerId = Number(document.getElementById("expenseUserSelect").value);
+    if (!users.length || !ownerId) return showToast("Create a user profile first, then pick who this expense is for.", "error");
+    const title = document.getElementById("expenseName").value.trim();
+    if (!title) return showToast("Enter a short title for this expense.", "error");
+    const categoryId = Number(document.getElementById("categorySelect").value);
+    if (!categoryId) return showToast("Pick a category (create one under Categories if needed).", "error");
+    const amt = Number(document.getElementById("amount").value);
+    if (!document.getElementById("amount").value || !(amt > 0)) return showToast("Amount must be greater than zero.", "error");
+    const d = document.getElementById("date").value;
+    if (!d) return showToast("Pick a date.", "error");
+    const today = new Date().toISOString().slice(0, 10);
+    if (editingExpenseId == null && d > today) return showToast("New expenses cannot be dated in the future.", "error");
+    try {
+      if (editingExpenseId == null) {
+        await apiJson(API + "/expenses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: ownerId,
+            category_id: categoryId,
+            amount: amt,
+            expense_date: d,
+            name: title,
+            notes: document.getElementById("expenseNotes").value.trim(),
+            payment_method: document.getElementById("expensePayment").value || "",
+          }),
+        });
+      } else {
+        await apiJson(API + "/expenses/" + editingExpenseId, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: ownerId,
+            category_id: categoryId,
+            amount: amt,
+            expense_date: d,
+            name: title,
+            notes: document.getElementById("expenseNotes").value.trim(),
+            payment_method: document.getElementById("expensePayment").value || "",
+          }),
+        });
+      }
+      clearExpenseForm();
+      await loadAll();
+      showToast("Expense saved", "success");
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  });
+
+  document.getElementById("cancelExpenseBtn").addEventListener("click", () => {
+    clearExpenseForm();
+    showToast("Editor cleared", "success");
+  });
+
+  document.getElementById("saveUserBtn").addEventListener("click", async () => {
+    const name = document.getElementById("userName").value.trim();
+    const email = document.getElementById("userEmail").value.trim();
+    const phone = document.getElementById("userPhone").value.trim();
+    if (!name || !email) return showToast("Name and email are required.", "error");
+    try {
+      if (editingUserId == null) {
+        await apiJson(API + "/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, phone }),
+        });
+      } else {
+        await apiJson(API + "/users/" + editingUserId, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, phone }),
+        });
+      }
+      clearUserForm();
+      await loadAll();
+      showToast("User saved", "success");
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  });
+
+  document.getElementById("cancelUserBtn").addEventListener("click", () => clearUserForm());
+
+  document.getElementById("saveCatBtn").addEventListener("click", async () => {
+    const name = document.getElementById("categoryName").value.trim();
+    const description = document.getElementById("categoryDescription").value.trim();
+    if (!name) return showToast("Enter a category name.", "error");
+    try {
+      if (editingCategoryId == null) {
+        await apiJson(API + "/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, description }),
+        });
+      } else {
+        await apiJson(API + "/categories/" + editingCategoryId, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, description }),
+        });
+      }
+      clearCatForm();
+      await loadAll();
+      showToast("Category saved", "success");
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  });
+
+  document.getElementById("cancelCatBtn").addEventListener("click", () => clearCatForm());
+
+  document.getElementById("main-content").addEventListener("click", async (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    const act = t.getAttribute("data-act");
+    const id = Number(t.getAttribute("data-id"));
+    if (!act || !id) return;
+
+    if (act === "edit-user") {
+      const u = users.find(x => x.id === id);
+      if (!u) return;
+      editingUserId = id;
+      document.getElementById("userName").value = u.name;
+      document.getElementById("userEmail").value = u.email;
+      document.getElementById("userPhone").value = u.phone || "";
+      navigate("users");
+      document.getElementById("userName").focus();
+      return;
+    }
+    if (act === "del-user") {
+      if (!confirm("Delete this profile and all of their expenses? This cannot be undone.")) return;
+      try {
+        await apiJson(API + "/users/" + id, { method: "DELETE" });
+        if (String(activeUserId) === String(id)) {
+          activeUserId = null;
+          localStorage.removeItem("activeUserId");
+        }
+        await loadAll();
+        showToast("User deleted", "success");
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+      return;
+    }
+    if (act === "edit-cat") {
+      const c = categories.find(x => x.id === id);
+      if (!c) return;
+      editingCategoryId = id;
+      document.getElementById("categoryName").value = c.name;
+      document.getElementById("categoryDescription").value = c.description || "";
+      navigate("categories");
+      document.getElementById("categoryName").focus();
+      return;
+    }
+    if (act === "del-cat") {
+      if (!confirm("Delete this category?")) return;
+      try {
+        await apiJson(API + "/categories/" + id, { method: "DELETE" });
+        await loadAll();
+        showToast("Category deleted", "success");
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+      return;
+    }
+    if (act === "edit-exp") {
+      const row = expenses.find(x => x.id === id);
+      if (!row) return;
+      editingExpenseId = id;
+      document.getElementById("expenseName").value = row.name || "";
+      document.getElementById("amount").value = String(row.amount);
+      document.getElementById("date").value = String(row.expense_date).slice(0, 10);
+      document.getElementById("expenseNotes").value = row.notes || "";
+      document.getElementById("expensePayment").value = row.payment_method || "";
+      const cat = categories.find(c => c.name === row.category);
+      document.getElementById("categorySelect").value = cat ? String(cat.id) : "";
+      setDateConstraintsForMode();
+      renderExpenseSubtitle();
+      renderExpenseUserSelect();
+      navigate("add");
+      document.getElementById("expenseName").focus();
+      return;
+    }
+    if (act === "del-exp") {
+      if (!confirm("Delete this expense?")) return;
+      try {
+        await apiJson(API + "/expenses/" + id, { method: "DELETE" });
+        await loadAll();
+        if (document.getElementById("panelSum").classList.contains("is-visible")) await refreshReports();
+        showToast("Expense deleted", "success");
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById("date").value = today;
+  document.getElementById("monthPicker").value = new Date().toISOString().slice(0, 7);
+  const cy = new Date().getFullYear();
+  document.getElementById("reportYear").value = String(cy);
+  document.getElementById("reportFromYear").value = String(cy - 2);
+  document.getElementById("reportToYear").value = String(cy);
+
+  loadAll().catch(e => showToast(e.message, "error"));
+  </script>
 </body>
 </html>
